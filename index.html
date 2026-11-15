@@ -1,0 +1,269 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>加藤コース 配送アプリ</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&display=swap">
+<style>
+/* Layout: 1列のスマホ向けチェックリスト。上に進捗、下に停車順のカード。次の1件だけ開いて見せる。
+   Color: 寒色グレーの地、青=操作、橙=いま向かう先、緑=完了、赤=時間超過 */
+:root{
+  --bg:#F1F4F7; --surface:#FFFFFF; --fg:#14212B; --muted:#586977; --line:#D8E0E7;
+  --accent:#0B5FA5; --accent-fg:#FFFFFF; --signal:#C2410C; --signal-bg:#FFF1E8;
+  --ok:#23704A; --ok-bg:#E6F4EC; --bad:#B42318; --bad-bg:#FDECEA;
+  --font:'Noto Sans JP','Hiragino Kaku Gothic ProN','Yu Gothic',system-ui,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0F171D; --surface:#17222B; --fg:#E8EEF2; --muted:#93A3B0; --line:#2A3946;
+  --accent:#5AA9E6; --accent-fg:#06121B; --signal:#FFA066; --signal-bg:#2B1D14;
+  --ok:#5CC48A; --ok-bg:#12261C; --bad:#FF8A80; --bad-bg:#2D1715; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0F171D; --surface:#17222B; --fg:#E8EEF2; --muted:#93A3B0; --line:#2A3946;
+  --accent:#5AA9E6; --accent-fg:#06121B; --signal:#FFA066; --signal-bg:#2B1D14;
+  --ok:#5CC48A; --ok-bg:#12261C; --bad:#FF8A80; --bad-bg:#2D1715; color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font);font-size:15px;line-height:1.55;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  padding-block:0 40px;-webkit-text-size-adjust:100%}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+.wrap{max-width:560px;margin:0 auto}
+button,a{font-family:inherit}
+button:focus-visible,a:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+
+header{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);padding:12px 0 10px;border-bottom:1px solid var(--line)}
+.hrow{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+h1{font-size:20px;font-weight:900;margin:0;letter-spacing:.02em}
+.clock{font-variant-numeric:tabular-nums;font-weight:700;font-size:20px}
+.sub{color:var(--muted);font-size:13px;margin:2px 0 8px}
+.bar{height:8px;border-radius:4px;background:var(--line);overflow:hidden}
+.bar>i{display:block;height:100%;background:var(--ok);width:0;transition:width .3s}
+.counts{display:flex;justify-content:space-between;gap:8px;margin-top:6px;font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+.counts b{color:var(--fg)}
+
+.next{margin:14px 0 4px;padding:12px 14px;border-radius:10px;background:var(--signal-bg);color:var(--signal);font-weight:700;display:flex;gap:10px;align-items:center}
+.next small{display:block;font-weight:500;color:var(--muted);font-size:12px}
+.next.finished{background:var(--ok-bg);color:var(--ok)}
+
+ol{list-style:none;margin:12px 0 0;padding:0;display:flex;flex-direction:column;gap:8px}
+.start,.goal{display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px dashed var(--line);border-radius:10px;color:var(--muted);font-size:14px}
+.start b,.goal b{color:var(--fg)}
+.goal{flex-wrap:wrap}
+.stop{background:var(--surface);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.stop.active{border-color:var(--signal);box-shadow:0 0 0 1px var(--signal)}
+.stop.done{background:var(--bg)}
+.head{width:100%;display:grid;grid-template-columns:32px minmax(0,1fr) auto;gap:10px;align-items:center;text-align:left;
+  background:none;border:0;color:inherit;padding:12px 14px;min-height:56px;cursor:pointer}
+.badge{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:14px;
+  background:var(--line);color:var(--fg);font-variant-numeric:tabular-nums}
+.active .badge{background:var(--signal);color:var(--surface)}
+.done .badge{background:var(--ok);color:var(--surface)}
+.name{font-weight:700;line-height:1.35;overflow-wrap:anywhere}
+.done .name{color:var(--muted);text-decoration:line-through;text-decoration-thickness:1px}
+.meta{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.plan{font-variant-numeric:tabular-nums;font-weight:700;font-size:14px;text-align:right}
+.plan small{display:block;font-weight:400;font-size:11px;color:var(--muted)}
+
+.body{padding:0 14px 14px;border-top:1px solid var(--line)}
+.addr{margin:10px 0 8px;font-size:13px;color:var(--muted);overflow-wrap:anywhere}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.chip{font-size:12px;font-weight:700;padding:3px 9px;border-radius:999px;background:var(--bg);color:var(--fg);border:1px solid var(--line)}
+.chip.time{background:var(--signal-bg);color:var(--signal);border-color:transparent}
+.chip.late{background:var(--bad-bg);color:var(--bad);border-color:transparent}
+.notes{margin:0 0 10px;padding-left:18px;font-size:13px;color:var(--fg)}
+.notes li{margin:2px 0}
+.items{display:flex;flex-direction:column;gap:6px;margin:0 0 12px}
+.item{display:grid;grid-template-columns:28px minmax(0,1fr);gap:12px;align-items:center;width:100%;text-align:left;
+  min-height:52px;padding:8px 12px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:inherit;cursor:pointer}
+.box{width:28px;height:28px;border-radius:7px;border:2px solid var(--muted);display:grid;place-items:center;color:transparent;font-weight:900}
+.item[aria-pressed="true"]{background:var(--ok-bg);border-color:transparent}
+.item[aria-pressed="true"] .box{background:var(--ok);border-color:var(--ok);color:var(--surface)}
+.item .t{font-weight:500;overflow-wrap:anywhere}
+.item .t span{display:block;font-size:12px;color:var(--muted)}
+.item .t em{font-style:normal;font-variant-numeric:tabular-nums;color:var(--muted);font-size:12px}
+.acts{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.btn{display:flex;align-items:center;justify-content:center;gap:6px;min-height:48px;padding:8px 12px;border-radius:9px;
+  font-weight:700;font-size:14px;text-decoration:none;cursor:pointer;border:1px solid var(--line);background:var(--surface);color:var(--fg)}
+.btn.primary{background:var(--accent);color:var(--accent-fg);border-color:transparent}
+.btn.set{background:var(--ok-bg);color:var(--ok);border-color:transparent}
+
+.foot{margin-top:22px;display:flex;justify-content:space-between;align-items:center;gap:12px;color:var(--muted);font-size:12px}
+.reset{min-height:44px;padding:8px 14px;border-radius:9px;border:1px solid var(--line);background:var(--surface);color:var(--muted);font-weight:700;cursor:pointer}
+.reset.arm{background:var(--bad-bg);color:var(--bad);border-color:transparent}
+@media (prefers-reduced-motion:reduce){.bar>i{transition:none}}
+@media (max-width:360px){.acts{grid-template-columns:1fr}}
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="hrow"><h1>加藤コース</h1><div class="clock" id="clock">--:--</div></div>
+    <p class="sub" id="sub">茅ヶ崎発着 ・ 15か所 19件</p>
+    <div class="bar" role="progressbar" aria-label="配達の進み具合" aria-valuemin="0" aria-valuemax="19" id="bar"><i id="barfill"></i></div>
+    <div class="counts"><span><b id="cDone">0</b> / 19件 完了</span><span>残り <b id="cLeft">19</b>件</span></div>
+  </header>
+
+  <div id="next"></div>
+  <ol id="list"></ol>
+
+  <div class="foot">
+    <span>チェックはこのスマホに自動で保存されます。日付が変わると最初からになります。</span>
+    <button class="reset" id="reset" type="button">リセット</button>
+  </div>
+</div>
+
+<script>
+var HOME_ADDR = '神奈川県茅ヶ崎市下町屋1-5-6';
+var STOPS = [
+  {id:1,name:'第五太陽ビル',plan:'7:40',addr:'東京都中央区銀座7-10-8 第五太陽ビル',
+   tags:['5件まとめて1回の駐車'],notes:['上の階から順に回ると階段の戻りが少なくなります'],
+   items:[{no:22,n:'鉄板焼き 海味',f:'B1'},{no:3,n:'銀座 クイント',f:'1階'},{no:14,n:'銀座 和牛鉄板焼 USHIGAMI',f:'4階',memo:'備考 F月404'},{no:9,n:'和食 吉乃',f:'6階'},{no:8,n:'AMANTE GINZA',f:'7階'}]},
+  {id:2,name:'カポ 跳龍門',plan:'8:40',addr:'東京都中央区銀座6-10-1 GINZA SIX 6F',
+   tags:['8:40〜8:50'],notes:['申請書を持参'],items:[{no:40,n:'カポ 跳龍門',f:'GINZA SIX 6階'}]},
+  {id:3,name:'シンガポール・リパブリック銀座',plan:'9:10',addr:'東京都中央区銀座2-2-14 マロニエゲート銀座1 11F',
+   limit:'11:00',tags:['11:00まで','入館証が必要'],notes:['11:00以降は台車が使えません。遅れそうならここを最優先'],
+   items:[{no:12,n:'シンガポール・リパブリック銀座',f:'11階'}]},
+  {id:4,name:'魚がし 有楽町',plan:'9:50',addr:'東京都中央区銀座1丁目3番先 北有楽ビル 1F',
+   tags:[],notes:[],items:[{no:21,n:'魚がし 有楽町',f:'1階'}]},
+  {id:5,name:'魚がし 京橋',plan:'10:15',addr:'東京都中央区京橋2-2-1 エドグラン地下1階',
+   tags:['路上駐車'],notes:['袋から出して納品'],items:[{no:35,n:'魚がし 京橋',f:'地下1階'}]},
+  {id:6,name:'焼鳥IPPON＋Tokyo',plan:'10:40',addr:'東京都中央区京橋3-9-6 G・M-3ビル 1F',
+   tags:[],notes:[],items:[{no:6,n:'焼鳥IPPON＋Tokyo',f:'1階'}]},
+  {id:7,name:'八重洲 一心',plan:'11:00',addr:'東京都中央区日本橋3-3-12 E-1ビル B1',
+   tags:['回収は10〜12時'],notes:[],items:[{no:24,n:'八重洲 steak & seafood 鉄板焼き 一心',f:'B1'}]},
+  {id:8,name:'魚がし 八重洲',plan:'11:30',addr:'東京都中央区日本橋2-2-20 第5大善ビル 1F',
+   tags:[],notes:[],items:[{no:18,n:'魚がし 八重洲',f:'1階'}]},
+  {id:9,name:'魚がし 大手町',plan:'12:00',addr:'東京都千代田区大手町1-9-2',
+   tags:['鍵の受け取り'],notes:['倉庫の鍵を店舗で受け取る'],items:[{no:34,n:'魚がし 大手町',f:''}]},
+  {id:10,name:'鮨＆BAR 不二楼',plan:'12:40',addr:'東京都千代田区丸の内1-5-1 新丸ビル 7F',
+   tags:['入館手続き'],notes:[],items:[{no:16,n:'鮨＆BAR 不二楼',f:'7階'}]},
+  {id:11,name:'魚がし 霞が関',plan:'13:25',addr:'東京都千代田区内幸町2-1-1 飯野ビルディング B1F',
+   tags:['8:50以降'],notes:[],items:[{no:44,n:'魚がし 霞が関',f:'B1'}]},
+  {id:12,name:'新橋グランハマー',plan:'13:55',addr:'東京都港区新橋2-8-5',
+   tags:['12〜13時は駐車禁止'],notes:['13時を過ぎてから着くこと'],items:[{no:30,n:'新橋グランハマー',f:''}]},
+  {id:13,name:'馬並み家 新橋HANARE店',plan:'14:20',addr:'東京都港区新橋3-18-1 新橋千陽ビル 2F',
+   tags:['店内セキュリティ'],notes:['レジ裏で解除'],items:[{no:13,n:'馬並み家 新橋HANARE店',f:'2階'}]},
+  {id:14,name:'魚がし 新橋駅前 総本店',plan:'14:40',addr:'東京都港区新橋3-21-10 オルバスビル 1F',
+   tags:[],notes:[],items:[{no:32,n:'魚がし 新橋駅前 総本店',f:'1階'}]},
+  {id:15,name:'丈 -yakitori TAKE',plan:'15:10',addr:'東京都港区新橋4-21-8 REVERIE SHINBASHI 3F',
+   tags:['11時以降に声掛け'],notes:['前の道は左折専用レーンに注意'],items:[{no:20,n:'丈 -yakitori TAKE',f:'3階'}]}
+];
+
+var KEY = 'kato-course-v1';
+function today(){var d=new Date();return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate();}
+function load(){
+  try{var s=JSON.parse(localStorage.getItem(KEY)); if(s && s.day===today()) return s;}catch(e){}
+  return {day:today(),done:{},arr:{},open:null};
+}
+var state = load();
+function save(){try{localStorage.setItem(KEY,JSON.stringify(state));}catch(e){}}
+
+var TOTAL = 0; STOPS.forEach(function(s){TOTAL += s.items.length;});
+function stopDone(s){return s.items.every(function(i){return state.done[i.no];});}
+function activeIdx(){for(var i=0;i<STOPS.length;i++){if(!stopDone(STOPS[i])) return i;} return -1;}
+function pad(n){return n<10?'0'+n:''+n;}
+function hhmm(d){return d.getHours()+':'+pad(d.getMinutes());}
+function mins(t){var p=t.split(':');return (+p[0])*60+(+p[1]);}
+function nowMin(){var d=new Date();return d.getHours()*60+d.getMinutes();}
+function navUrl(addr){return 'https://www.google.com/maps/dir/?api=1&travelmode=driving&destination='+encodeURIComponent(addr);}
+function $(id){return document.getElementById(id);}
+
+function render(){
+  var a = activeIdx();
+  var doneCount = 0; STOPS.forEach(function(s){s.items.forEach(function(i){if(state.done[i.no]) doneCount++;});});
+  $('cDone').textContent = doneCount;
+  $('cLeft').textContent = TOTAL - doneCount;
+  $('barfill').style.width = (doneCount/TOTAL*100)+'%';
+  $('bar').setAttribute('aria-valuenow', doneCount);
+
+  var nx = $('next');
+  if(a<0){
+    nx.innerHTML = '<div class="next finished"><div>全件完了です<small>茅ヶ崎へ戻りましょう</small></div></div>';
+  }else{
+    var s = STOPS[a];
+    nx.innerHTML = '<div class="next"><div>次は '+s.name+'<small>予定 '+s.plan+' ・ 残り '+s.items.filter(function(i){return !state.done[i.no];}).length+'件</small></div></div>';
+  }
+
+  var html = '<li class="start"><b>6:00</b><span>茅ヶ崎を出発（カポの申請書・シンガポールの入館証を持つ）</span></li>';
+  STOPS.forEach(function(s,idx){
+    var done = stopDone(s), isActive = idx===a;
+    var open = state.open===s.id || (state.open==null && isActive);
+    var left = s.items.filter(function(i){return !state.done[i.no];}).length;
+    var cls = 'stop'+(done?' done':'')+(isActive?' active':'');
+    html += '<li class="'+cls+'">';
+    html += '<button class="head" type="button" data-act="open" data-id="'+s.id+'" aria-expanded="'+open+'">'
+         + '<span class="badge">'+(done?'✓':s.id)+'</span>'
+         + '<span><span class="name">'+s.name+'</span><span class="meta" style="display:block">'
+         + (done ? '完了' : '残り'+left+'/'+s.items.length+'件')
+         + (state.arr[s.id] ? ' ・ 到着 '+state.arr[s.id] : '')+'</span></span>'
+         + '<span class="plan">'+s.plan+'<small>予定</small></span></button>';
+    if(open){
+      html += '<div class="body"><p class="addr">'+s.addr+'</p>';
+      var chips = '';
+      s.tags.forEach(function(t){chips += '<span class="chip time">'+t+'</span>';});
+      if(s.limit && !done && nowMin()>mins(s.limit)) chips += '<span class="chip late">時間を過ぎています</span>';
+      if(chips) html += '<div class="chips">'+chips+'</div>';
+      if(s.notes.length){html += '<ul class="notes">'+s.notes.map(function(n){return '<li>'+n+'</li>';}).join('')+'</ul>';}
+      html += '<div class="items">';
+      s.items.forEach(function(i){
+        var on = !!state.done[i.no];
+        html += '<button class="item" type="button" data-act="item" data-no="'+i.no+'" data-id="'+s.id+'" aria-pressed="'+on+'">'
+              + '<span class="box">✓</span><span class="t">'+i.n+'<span><em>No.'+i.no+'</em>'+(i.f?' ・ '+i.f:'')+(i.memo?' ・ '+i.memo:'')+'</span></span></button>';
+      });
+      html += '</div><div class="acts">'
+            + '<a class="btn primary" href="'+navUrl(s.addr)+'" target="_blank" rel="noopener">ナビを開く</a>'
+            + '<button class="btn'+(state.arr[s.id]?' set':'')+'" type="button" data-act="arrive" data-id="'+s.id+'">'
+            + (state.arr[s.id] ? '到着 '+state.arr[s.id]+'（取消）' : '到着を記録')+'</button></div></div>';
+    }
+    html += '</li>';
+  });
+  html += '<li class="goal"><b>茅ヶ崎へ戻る</b><span style="flex:1;min-width:0">予定 15:30 発 ・ 17:00ごろ着</span>'
+        + '<a class="btn primary" style="min-height:44px" href="'+navUrl(HOME_ADDR)+'" target="_blank" rel="noopener">ナビを開く</a></li>';
+  $('list').innerHTML = html;
+}
+
+function tick(){
+  var d = new Date();
+  $('clock').textContent = hhmm(d);
+}
+
+$('list').addEventListener('click', function(e){
+  var el = e.target.closest('[data-act]'); if(!el) return;
+  var act = el.getAttribute('data-act'), id = +el.getAttribute('data-id');
+  var before = activeIdx();
+  if(act==='open'){
+    var a = activeIdx(), isOpen = (state.open===id) || (state.open==null && a>=0 && STOPS[a].id===id);
+    state.open = isOpen ? 'none' : id;
+  }else if(act==='item'){
+    var no = el.getAttribute('data-no');
+    if(state.done[no]) delete state.done[no]; else state.done[no] = true;
+    var s = STOPS.filter(function(x){return x.id===id;})[0];
+    if(stopDone(s)){
+      if(!state.arr[id]) state.arr[id] = hhmm(new Date());
+      state.open = null;
+    }
+  }else if(act==='arrive'){
+    if(state.arr[id]) delete state.arr[id]; else state.arr[id] = hhmm(new Date());
+  }
+  save(); render();
+  var after = activeIdx();
+  if(after!==before && after>=0){
+    var cards = document.querySelectorAll('.stop');
+    if(cards[after] && cards[after].scrollIntoView) cards[after].scrollIntoView({block:'start',behavior:'smooth'});
+  }
+});
+
+var armed = false, armTimer = null;
+$('reset').addEventListener('click', function(){
+  var b = $('reset');
+  if(!armed){
+    armed = true; b.textContent = 'もう一度押すと全部消えます'; b.classList.add('arm');
+    armTimer = setTimeout(function(){armed=false;b.textContent='リセット';b.classList.remove('arm');},4000);
+  }else{
+    clearTimeout(armTimer); armed=false; b.textContent='リセット'; b.classList.remove('arm');
+    state = {day:today(),done:{},arr:{},open:null}; save(); render();
+  }
+});
+
+tick(); render();
+setInterval(function(){tick(); render();}, 60000);
+</script>
+
+</body></html>
