@@ -4,21 +4,24 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&display=swap">
 <style>
 /* Layout: 1列のスマホ向けチェックリスト。上に進捗、下に停車順のカード。次の1件だけ開いて見せる。
-   Color: 寒色グレーの地、青=操作、橙=いま向かう先、緑=完了、赤=時間超過 */
+   Color: 寒色グレーの地、青=操作、橙=いま向かう先、緑=完了、黄=注意事項、赤=時間超過 */
 :root{
   --bg:#F1F4F7; --surface:#FFFFFF; --fg:#14212B; --muted:#586977; --line:#D8E0E7;
   --accent:#0B5FA5; --accent-fg:#FFFFFF; --signal:#C2410C; --signal-bg:#FFF1E8;
   --ok:#23704A; --ok-bg:#E6F4EC; --bad:#B42318; --bad-bg:#FDECEA;
+  --warn:#7A4E00; --warn-bg:#FFF4D6;
   --font:'Noto Sans JP','Hiragino Kaku Gothic ProN','Yu Gothic',system-ui,sans-serif;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
   --bg:#0F171D; --surface:#17222B; --fg:#E8EEF2; --muted:#93A3B0; --line:#2A3946;
   --accent:#5AA9E6; --accent-fg:#06121B; --signal:#FFA066; --signal-bg:#2B1D14;
-  --ok:#5CC48A; --ok-bg:#12261C; --bad:#FF8A80; --bad-bg:#2D1715; color-scheme:dark}}
+  --ok:#5CC48A; --ok-bg:#12261C; --bad:#FF8A80; --bad-bg:#2D1715;
+  --warn:#F2C35B; --warn-bg:#2A2310; color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#0F171D; --surface:#17222B; --fg:#E8EEF2; --muted:#93A3B0; --line:#2A3946;
   --accent:#5AA9E6; --accent-fg:#06121B; --signal:#FFA066; --signal-bg:#2B1D14;
-  --ok:#5CC48A; --ok-bg:#12261C; --bad:#FF8A80; --bad-bg:#2D1715; color-scheme:dark}
+  --ok:#5CC48A; --ok-bg:#12261C; --bad:#FF8A80; --bad-bg:#2D1715;
+  --warn:#F2C35B; --warn-bg:#2A2310; color-scheme:dark}
 
 *{box-sizing:border-box}
 body{background:var(--bg);color:var(--fg);font-family:var(--font);font-size:15px;line-height:1.55;
@@ -68,9 +71,8 @@ ol{list-style:none;margin:12px 0 0;padding:0;display:flex;flex-direction:column;
 .chip{font-size:12px;font-weight:700;padding:3px 9px;border-radius:999px;background:var(--bg);color:var(--fg);border:1px solid var(--line)}
 .chip.time{background:var(--signal-bg);color:var(--signal);border-color:transparent}
 .chip.late{background:var(--bad-bg);color:var(--bad);border-color:transparent}
-.notes{margin:0 0 10px;padding-left:18px;font-size:13px;color:var(--fg)}
-.notes li{margin:2px 0}
-.items{display:flex;flex-direction:column;gap:6px;margin:0 0 12px}
+.items{display:flex;flex-direction:column;gap:12px;margin:0 0 12px}
+.irow{display:flex;flex-direction:column;gap:6px}
 .item{display:grid;grid-template-columns:28px minmax(0,1fr);gap:12px;align-items:center;width:100%;text-align:left;
   min-height:52px;padding:8px 12px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:inherit;cursor:pointer}
 .box{width:28px;height:28px;border-radius:7px;border:2px solid var(--muted);display:grid;place-items:center;color:transparent;font-weight:900}
@@ -79,6 +81,13 @@ ol{list-style:none;margin:12px 0 0;padding:0;display:flex;flex-direction:column;
 .item .t{font-weight:500;overflow-wrap:anywhere}
 .item .t span{display:block;font-size:12px;color:var(--muted)}
 .item .t em{font-style:normal;font-variant-numeric:tabular-nums;color:var(--muted);font-size:12px}
+.warn{font-size:13px;line-height:1.6;padding:8px 12px;border-radius:8px;background:var(--warn-bg);color:var(--warn);overflow-wrap:anywhere}
+.warn b{display:inline-block;margin-right:8px;font-size:11px;letter-spacing:.1em}
+.howbtn{width:100%;min-height:44px;text-align:left;padding:8px 12px;border-radius:8px;border:1px solid var(--line);
+  background:var(--surface);color:var(--accent);font-weight:700;font-size:13px;cursor:pointer}
+.howtext{white-space:pre-line;font-size:14px;line-height:1.75;padding:10px 12px;border-left:3px solid var(--accent);
+  background:var(--bg);border-radius:0 8px 8px 0;overflow-wrap:anywhere}
+.howlabel{display:block;font-size:11px;letter-spacing:.1em;color:var(--accent);margin-bottom:2px}
 .acts{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .btn{display:flex;align-items:center;justify-content:center;gap:6px;min-height:48px;padding:8px 12px;border-radius:9px;
   font-weight:700;font-size:14px;text-decoration:none;cursor:pointer;border:1px solid var(--line);background:var(--surface);color:var(--fg)}
@@ -113,44 +122,98 @@ ol{list-style:none;margin:12px 0 0;padding:0;display:flex;flex-direction:column;
 var HOME_ADDR = '神奈川県茅ヶ崎市下町屋1-5-6';
 var STOPS = [
   {id:1,name:'第五太陽ビル',plan:'7:40',addr:'東京都中央区銀座7-10-8 第五太陽ビル',
-   tags:['5件まとめて1回の駐車'],notes:['上の階から順に回ると階段の戻りが少なくなります'],
-   items:[{no:22,n:'鉄板焼き 海味',f:'B1'},{no:3,n:'銀座 クイント',f:'1階'},{no:14,n:'銀座 和牛鉄板焼 USHIGAMI',f:'4階',memo:'備考 F月404'},{no:9,n:'和食 吉乃',f:'6階'},{no:8,n:'AMANTE GINZA',f:'7階'}]},
+   tags:['5件まとめて1回の駐車'],
+   items:[
+    {no:22,n:'鉄板焼き 海味',f:'B1',
+     how:'階段を降りて、扉の前（外側）で集配。',
+     warn:'USHIGAMIと同じ建物（入口は建物の隣から階段を降りる）'},
+    {no:3,n:'銀座 クイント',f:'1階',
+     how:'キーボックス（番号 0521）を開けて中に入り、左正面の厨房内を左へ進むとバックスペースあり。そこで集配。',
+     warn:'USHIGAMIと同じ建物'},
+    {no:14,n:'銀座 和牛鉄板焼 USHIGAMI',f:'4階',memo:'F月404',
+     how:'ビルに入って右奥のエレベーターで4階へ。\n降りたら左側が店舗で、トイレがある廊下があります。\nそのトイレの扉の反対側で集配。',
+     warn:'店舗ビル前は停められるスペースがあるが、駐車禁止コーンが多数並んでいる。'},
+    {no:9,n:'和食 吉乃',f:'6階',
+     how:'階段前か店舗前で集配。',
+     warn:'USHIGAMIと同じ建物'},
+    {no:8,n:'AMANTE GINZA',f:'7階',
+     how:'次回から回収物は店内に置いてもらえるとのこと。納品も店内に置く。\nドアにキーボックスあり（番号 0607）。\n中にキーが2本入っているが、どちらも同じキー。',
+     warn:'USHIGAMIと同じ建物'}
+   ]},
   {id:2,name:'カポ 跳龍門',plan:'8:40',addr:'東京都中央区銀座6-10-1 GINZA SIX 6F',
-   tags:['8:40〜8:50'],notes:['申請書を持参'],items:[{no:40,n:'カポ 跳龍門',f:'GINZA SIX 6階'}]},
+   tags:['8:40〜8:50付近','申請書を持参'],
+   items:[{no:40,n:'カポ 跳龍門',f:'GINZA SIX 6階',
+    how:'USHIGAMIから真っ直ぐ進み、高架下の右側にP入口あり。\n搬入車専用のB3へ進み、真ん中（1トン、軽バン）専用スペースへ駐車。\n受付窓口で申請書を渡し、入館手続き（2か所）。※台車もレンタル。\n自販機2台を過ぎてDコアへ。EVで6階に上がり、店内正面が店舗。\n店内に入ってすぐの場所で集配。',
+    warn:'駐車場代と台車レンタル費用で ¥400 かかる。工場から申請書を持ち出す必要あり。'}]},
   {id:3,name:'シンガポール・リパブリック銀座',plan:'9:10',addr:'東京都中央区銀座2-2-14 マロニエゲート銀座1 11F',
-   limit:'11:00',tags:['11:00まで','入館証が必要'],notes:['11:00以降は台車が使えません。遅れそうならここを最優先'],
-   items:[{no:12,n:'シンガポール・リパブリック銀座',f:'11階'}]},
+   limit:'11:00',tags:['11:00まで','入館証が必要'],
+   items:[{no:12,n:'シンガポール・リパブリック銀座',f:'11階',
+    how:'左壁沿いで車両待機。警備員の指示に従い、ターンテーブルに車両を乗せる。\n※警備員から駐車位置番号のカードをフロントに差されるので、指定箇所に駐車。\nEV（車両用）に乗ったら、エンジンを切ってB2ボタンを押す。\nB2に着いたら、バックでターンテーブルに車両を乗せて車から降り、↓ボタン（左回り）を長押しして車両の向きを変え、指定番号に駐車。\n後方の受付で入館証を渡し、カードを受け取る。先のEVで11階へ。\n店内レジ裏の部屋で集配（幅がせまい）。\n帰りは逆の手順。バックでターンテーブルに乗せて↑ボタン、1階上がってバック。',
+    warn:'11:00以降は台車が使えない。入館証が必須。'}]},
   {id:4,name:'魚がし 有楽町',plan:'9:50',addr:'東京都中央区銀座1丁目3番先 北有楽ビル 1F',
-   tags:[],notes:[],items:[{no:21,n:'魚がし 有楽町',f:'1階'}]},
+   tags:[],
+   items:[{no:21,n:'魚がし 有楽町',f:'1階',
+    how:'店舗右側の階段で2階へ。右側に茶色の扉があり、その中で集配。\n扉の裏に回収物あり。暗証番号 2828。'}]},
   {id:5,name:'魚がし 京橋',plan:'10:15',addr:'東京都中央区京橋2-2-1 エドグラン地下1階',
-   tags:['路上駐車'],notes:['袋から出して納品'],items:[{no:35,n:'魚がし 京橋',f:'地下1階'}]},
+   tags:['路上駐車'],
+   items:[{no:35,n:'魚がし 京橋',f:'地下1階',
+    how:'路上に駐車し、エスカレーターで1階へ降りる。\n左突き当りの倉庫を 77577E で解除。\n右側の手前から4つ目の倉庫内で集配。',
+    warn:'袋から出して納品する。'}]},
   {id:6,name:'焼鳥IPPON＋Tokyo',plan:'10:40',addr:'東京都中央区京橋3-9-6 G・M-3ビル 1F',
-   tags:[],notes:[],items:[{no:6,n:'焼鳥IPPON＋Tokyo',f:'1階'}]},
+   tags:['鍵・セキュリティあり'],
+   items:[{no:6,n:'焼鳥IPPON＋Tokyo',f:'1階',
+    how:'店内の突き当り左の部屋の中で集配。',
+    warn:'鍵、セキュリティあり。'}]},
   {id:7,name:'八重洲 一心',plan:'11:00',addr:'東京都中央区日本橋3-3-12 E-1ビル B1',
-   tags:['回収は10〜12時'],notes:[],items:[{no:24,n:'八重洲 steak & seafood 鉄板焼き 一心',f:'B1'}]},
+   tags:['回収は10〜12時'],
+   items:[{no:24,n:'八重洲 steak & seafood 鉄板焼き 一心',f:'B1',
+    how:'店舗ビルの左側にある下り階段を降りて店内へ。\n入って右に曲がり、カウンター後ろを通り、突き当たりを右に曲がった「スタッフオンリー」の扉の中で集配。\n店舗前は少し幅が狭いが駐車可能。',
+    warn:'店舗から、10時（シャッターが閉まっているため）から12時の間に来てほしいと言われている。11時半から営業しているが、しっかりお客が入るのは12時以降で、その前なら問題ないとのこと。12時以降になった場合は店舗従業員に声をかけて集配をお願いする。'}]},
   {id:8,name:'魚がし 八重洲',plan:'11:30',addr:'東京都中央区日本橋2-2-20 第5大善ビル 1F',
-   tags:[],notes:[],items:[{no:18,n:'魚がし 八重洲',f:'1階'}]},
+   tags:[],
+   items:[{no:18,n:'魚がし 八重洲',f:'1階',
+    how:'店内に入って、突き当り右側の扉で地下B1へ（トイレ案内）。\nB1突き当りのスタッフオンリー部屋の中で集配。'}]},
   {id:9,name:'魚がし 大手町',plan:'12:00',addr:'東京都千代田区大手町1-9-2',
-   tags:['鍵の受け取り'],notes:['倉庫の鍵を店舗で受け取る'],items:[{no:34,n:'魚がし 大手町',f:''}]},
+   tags:['倉庫の鍵を店舗で受け取る'],
+   items:[{no:34,n:'魚がし 大手町',f:'',
+    how:'別紙参考（シートの資料）。\n店舗で倉庫の鍵を受け取る → 倉庫で集配 → 店舗へ鍵を返却。',
+    warn:'集配物から青伝票を取り出し、鍵の棚の上に置く。'}]},
   {id:10,name:'鮨＆BAR 不二楼',plan:'12:40',addr:'東京都千代田区丸の内1-5-1 新丸ビル 7F',
-   tags:['入館手続き'],notes:[],items:[{no:16,n:'鮨＆BAR 不二楼',f:'7階'}]},
+   tags:['入館手続き'],
+   items:[{no:16,n:'鮨＆BAR 不二楼',f:'7階',
+    how:'搬入専用に駐車（警備員の指示あり）。\n入館手続きをして、EVで6階。EVを降りたら右突き当りの扉を開ける。\n左へずっと進み、扉2つを開けた先の左手前が不二楼の倉庫。廊下で集配。'}]},
   {id:11,name:'魚がし 霞が関',plan:'13:25',addr:'東京都千代田区内幸町2-1-1 飯野ビルディング B1F',
-   tags:['8:50以降'],notes:[],items:[{no:44,n:'魚がし 霞が関',f:'B1'}]},
+   tags:['8:50以降'],
+   items:[{no:44,n:'魚がし 霞が関',f:'B1',
+    how:'手順はシートの写真を参照。',
+    warn:'台車を借りる（無料）。'}]},
   {id:12,name:'新橋グランハマー',plan:'13:55',addr:'東京都港区新橋2-8-5',
-   tags:['12〜13時は駐車禁止'],notes:['13時を過ぎてから着くこと'],items:[{no:30,n:'新橋グランハマー',f:''}]},
+   tags:['12〜13時は駐車禁止'],
+   items:[{no:30,n:'新橋グランハマー',f:'4階・5階',
+    how:'4階、5階の更衣室内で集配。\n（B1〜2階分は、4階奥のスタッフオンリー部屋）\n（3、4階分は、4階の通路）\n（5階から上のフロア分は、5階のフロアテーブルの上に納品。付近に回収あり）',
+    warn:'昼12時〜13時はランチタイムのため駐車禁止（警察からの指導あり）。'}]},
   {id:13,name:'馬並み家 新橋HANARE店',plan:'14:20',addr:'東京都港区新橋3-18-1 新橋千陽ビル 2F',
-   tags:['店内セキュリティ'],notes:['レジ裏で解除'],items:[{no:13,n:'馬並み家 新橋HANARE店',f:'2階'}]},
+   tags:['店内セキュリティ'],
+   items:[{no:13,n:'馬並み家 新橋HANARE店',f:'2階',
+    how:'店内セキュリティあり。レジ裏で解除。\n突き当り右の棚の中で集配。',
+    warn:'時間帯でEVが使えない場合は、階段を使う。'}]},
   {id:14,name:'魚がし 新橋駅前 総本店',plan:'14:40',addr:'東京都港区新橋3-21-10 オルバスビル 1F',
-   tags:[],notes:[],items:[{no:32,n:'魚がし 新橋駅前 総本店',f:'1階'}]},
+   tags:['集配先は別建物のマンション'],
+   items:[{no:32,n:'魚がし 新橋駅前 総本店',f:'1階（店舗）',
+    how:'店内のレジ下に部屋の鍵あり。\nファミリーマート新宿4丁目店のマンション406号室で集配。\n集配後、鍵を店舗へ返却。',
+    warn:'集配先は別建物のマンションの一室。'}]},
   {id:15,name:'丈 -yakitori TAKE',plan:'15:10',addr:'東京都港区新橋4-21-8 REVERIE SHINBASHI 3F',
-   tags:['11時以降に声掛け'],notes:['前の道は左折専用レーンに注意'],items:[{no:20,n:'丈 -yakitori TAKE',f:'3階'}]}
+   tags:['11時以降に声掛け'],
+   items:[{no:20,n:'丈 -yakitori TAKE',f:'3階',
+    how:'エレベーターで3階へ。\n午前11時以降は人がいるため、直接声をかけて納品・回収をお願いする。',
+    warn:'店舗前の道路は左折専用レーンで停めづらい。左に曲がってすぐの場所（シートの3枚目の写真）か、店舗手前の左手に停めるのがよい。'}]}
 ];
 
 var KEY = 'kato-course-v1';
 function today(){var d=new Date();return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate();}
 function load(){
-  try{var s=JSON.parse(localStorage.getItem(KEY)); if(s && s.day===today()) return s;}catch(e){}
-  return {day:today(),done:{},arr:{},open:null};
+  try{var s=JSON.parse(localStorage.getItem(KEY)); if(s && s.day===today()){ if(!s.how) s.how={}; return s; }}catch(e){}
+  return {day:today(),done:{},arr:{},open:null,how:{}};
 }
 var state = load();
 function save(){try{localStorage.setItem(KEY,JSON.stringify(state));}catch(e){}}
@@ -177,8 +240,8 @@ function render(){
   if(a<0){
     nx.innerHTML = '<div class="next finished"><div>全件完了です<small>茅ヶ崎へ戻りましょう</small></div></div>';
   }else{
-    var s = STOPS[a];
-    nx.innerHTML = '<div class="next"><div>次は '+s.name+'<small>予定 '+s.plan+' ・ 残り '+s.items.filter(function(i){return !state.done[i.no];}).length+'件</small></div></div>';
+    var s0 = STOPS[a];
+    nx.innerHTML = '<div class="next"><div>次は '+s0.name+'<small>予定 '+s0.plan+' ・ 残り '+s0.items.filter(function(i){return !state.done[i.no];}).length+'件</small></div></div>';
   }
 
   var html = '<li class="start"><b>6:00</b><span>茅ヶ崎を出発（カポの申請書・シンガポールの入館証を持つ）</span></li>';
@@ -200,12 +263,15 @@ function render(){
       s.tags.forEach(function(t){chips += '<span class="chip time">'+t+'</span>';});
       if(s.limit && !done && nowMin()>mins(s.limit)) chips += '<span class="chip late">時間を過ぎています</span>';
       if(chips) html += '<div class="chips">'+chips+'</div>';
-      if(s.notes.length){html += '<ul class="notes">'+s.notes.map(function(n){return '<li>'+n+'</li>';}).join('')+'</ul>';}
       html += '<div class="items">';
       s.items.forEach(function(i){
         var on = !!state.done[i.no];
-        html += '<button class="item" type="button" data-act="item" data-no="'+i.no+'" data-id="'+s.id+'" aria-pressed="'+on+'">'
+        html += '<div class="irow">'
+              + '<button class="item" type="button" data-act="item" data-no="'+i.no+'" data-id="'+s.id+'" aria-pressed="'+on+'">'
               + '<span class="box">✓</span><span class="t">'+i.n+'<span><em>No.'+i.no+'</em>'+(i.f?' ・ '+i.f:'')+(i.memo?' ・ '+i.memo:'')+'</span></span></button>';
+        if(i.warn) html += '<div class="warn"><b>注意事項</b>'+i.warn+'</div>';
+        if(i.how) html += '<div class="howtext"><b class="howlabel">集配方法</b>'+i.how+'</div>';
+        html += '</div>';
       });
       html += '</div><div class="acts">'
             + '<a class="btn primary" href="'+navUrl(s.addr)+'" target="_blank" rel="noopener">ナビを開く</a>'
@@ -219,10 +285,7 @@ function render(){
   $('list').innerHTML = html;
 }
 
-function tick(){
-  var d = new Date();
-  $('clock').textContent = hhmm(d);
-}
+function tick(){ $('clock').textContent = hhmm(new Date()); }
 
 $('list').addEventListener('click', function(e){
   var el = e.target.closest('[data-act]'); if(!el) return;
@@ -239,6 +302,9 @@ $('list').addEventListener('click', function(e){
       if(!state.arr[id]) state.arr[id] = hhmm(new Date());
       state.open = null;
     }
+  }else if(act==='how'){
+    var hn = el.getAttribute('data-no');
+    if(state.how[hn]) delete state.how[hn]; else state.how[hn] = true;
   }else if(act==='arrive'){
     if(state.arr[id]) delete state.arr[id]; else state.arr[id] = hhmm(new Date());
   }
@@ -258,7 +324,7 @@ $('reset').addEventListener('click', function(){
     armTimer = setTimeout(function(){armed=false;b.textContent='リセット';b.classList.remove('arm');},4000);
   }else{
     clearTimeout(armTimer); armed=false; b.textContent='リセット'; b.classList.remove('arm');
-    state = {day:today(),done:{},arr:{},open:null}; save(); render();
+    state = {day:today(),done:{},arr:{},open:null,how:{}}; save(); render();
   }
 });
 
